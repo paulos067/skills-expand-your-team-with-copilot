@@ -25,6 +25,19 @@ document.addEventListener("DOMContentLoaded", () => {
   const closeLoginModal = document.querySelector(".close-login-modal");
   const loginMessage = document.getElementById("login-message");
 
+  // Share modal elements
+  const shareModal = document.getElementById("share-modal");
+  const shareActivityName = document.getElementById("share-activity-name");
+  const closeShareModal = document.querySelector(".close-share-modal");
+  const twitterShareButton = document.getElementById("twitter-share");
+  const facebookShareButton = document.getElementById("facebook-share");
+  const emailShareButton = document.getElementById("email-share");
+  const copyLinkButton = document.getElementById("copy-link");
+  const shareLinkInput = document.getElementById("share-link-input");
+
+  // State for sharing
+  let currentShareActivity = null;
+
   // Activity categories with corresponding colors
   const activityTypes = {
     sports: { label: "Sports", color: "#e8f5e9", textColor: "#2e7d32" },
@@ -252,6 +265,108 @@ document.addEventListener("DOMContentLoaded", () => {
     const username = document.getElementById("username").value;
     const password = document.getElementById("password").value;
     await login(username, password);
+  });
+
+  // Share modal functions
+  function openShareModal(activityName, activityDetails) {
+    currentShareActivity = { name: activityName, details: activityDetails };
+    shareActivityName.textContent = activityName;
+    
+    // Generate shareable URL
+    const shareUrl = generateShareUrl(activityName);
+    shareLinkInput.value = shareUrl;
+    
+    shareModal.classList.remove("hidden");
+    setTimeout(() => {
+      shareModal.classList.add("show");
+    }, 10);
+  }
+
+  function closeShareModalHandler() {
+    shareModal.classList.remove("show");
+    setTimeout(() => {
+      shareModal.classList.add("hidden");
+      currentShareActivity = null;
+    }, 300);
+  }
+
+  function generateShareUrl(activityName) {
+    const baseUrl = window.location.origin + window.location.pathname;
+    return `${baseUrl}?activity=${encodeURIComponent(activityName)}`;
+  }
+
+  function generateShareText(activityName, activityDetails) {
+    const schedule = formatSchedule(activityDetails);
+    return `Check out ${activityName} at Mergington High School! ${activityDetails.description} Schedule: ${schedule}`;
+  }
+
+  // Share to Twitter
+  function shareToTwitter() {
+    if (!currentShareActivity) return;
+    
+    const text = generateShareText(currentShareActivity.name, currentShareActivity.details);
+    const url = generateShareUrl(currentShareActivity.name);
+    const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`;
+    
+    window.open(twitterUrl, '_blank', 'width=550,height=420');
+  }
+
+  // Share to Facebook
+  function shareToFacebook() {
+    if (!currentShareActivity) return;
+    
+    const url = generateShareUrl(currentShareActivity.name);
+    const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`;
+    
+    window.open(facebookUrl, '_blank', 'width=550,height=420');
+  }
+
+  // Share via Email
+  function shareViaEmail() {
+    if (!currentShareActivity) return;
+    
+    const subject = `Join ${currentShareActivity.name} at Mergington High School`;
+    const body = generateShareText(currentShareActivity.name, currentShareActivity.details) + 
+                 `\n\nLearn more: ${generateShareUrl(currentShareActivity.name)}`;
+    
+    const mailtoUrl = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    window.location.href = mailtoUrl;
+  }
+
+  // Copy link to clipboard
+  async function copyShareLink() {
+    try {
+      await navigator.clipboard.writeText(shareLinkInput.value);
+      
+      // Visual feedback
+      const originalText = copyLinkButton.innerHTML;
+      copyLinkButton.innerHTML = '<span class="share-icon">✓</span><span>Copied!</span>';
+      copyLinkButton.style.backgroundColor = 'var(--success-light)';
+      copyLinkButton.style.borderColor = 'var(--success)';
+      
+      setTimeout(() => {
+        copyLinkButton.innerHTML = originalText;
+        copyLinkButton.style.backgroundColor = '';
+        copyLinkButton.style.borderColor = '';
+      }, 2000);
+    } catch (error) {
+      console.error('Failed to copy link:', error);
+      showMessage('Failed to copy link', 'error');
+    }
+  }
+
+  // Event listeners for share modal
+  closeShareModal.addEventListener("click", closeShareModalHandler);
+  twitterShareButton.addEventListener("click", shareToTwitter);
+  facebookShareButton.addEventListener("click", shareToFacebook);
+  emailShareButton.addEventListener("click", shareViaEmail);
+  copyLinkButton.addEventListener("click", copyShareLink);
+
+  // Close share modal when clicking outside
+  window.addEventListener("click", (event) => {
+    if (event.target === shareModal) {
+      closeShareModalHandler();
+    }
   });
 
   // Show loading skeletons
@@ -568,6 +683,10 @@ document.addEventListener("DOMContentLoaded", () => {
           </div>
         `
         }
+        <button class="share-activity-button" data-activity="${name}">
+          <span class="share-icon-small">📤</span>
+          <span>Share</span>
+        </button>
       </div>
     `;
 
@@ -586,6 +705,12 @@ document.addEventListener("DOMContentLoaded", () => {
         });
       }
     }
+
+    // Add click handler for share button
+    const shareButton = activityCard.querySelector(".share-activity-button");
+    shareButton.addEventListener("click", () => {
+      openShareModal(name, details);
+    });
 
     activitiesList.appendChild(activityCard);
   }
